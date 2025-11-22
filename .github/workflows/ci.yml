@@ -1,0 +1,79 @@
+name: FlaskApp CI/CD
+
+# Trigger on push to main or pull requests targeting main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Job 1: Run tests
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+  # Job 2: Build and Push Docker Image (runs after tests pass)
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test  # only runs if tests pass
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t flaskapp .
+
+      # Push to Docker Hub
+      - name: Login to Docker Hub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Push to Docker Hub
+        run: |
+          docker tag flaskapp ${{ secrets.DOCKER_USERNAME }}/flaskapp:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/flaskapp:latest
+
+      # Optional: Push to Private Registry
+      - name: Push to Private Registry
+        if: ${{ secrets.PRIVATE_REGISTRY_URL }}
+        run: |
+          echo ${{ secrets.PRIVATE_REGISTRY_PASSWORD }} | docker login ${{ secrets.PRIVATE_REGISTRY_URL }} -u ${{ secrets.PRIVATE_REGISTRY_USERNAME }} --password-stdin
+          docker tag flaskapp ${{ secrets.PRIVATE_REGISTRY_URL }}/flaskapp:latest
+          docker push ${{ secrets.PRIVATE_REGISTRY_URL }}/flaskapp:latest
+
+  # Job 3: Send email if tests fail
+  notify:
+    name: Email Notification on Failure
+    runs-on: ubuntu-latest
+    needs: test
+    if: failure()  # only runs if test job fails
+
+    steps:
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "CI Failure in FlaskApp"
+          body: "Tests failed in GitHub Actions pipeline."
+          to: your-email@example.com
+          from: CI Bot
