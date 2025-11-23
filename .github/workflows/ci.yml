@@ -52,7 +52,8 @@ jobs:
 
       # Optional: Push to Private Registry
       - name: Push to Private Registry
-        if: ${{ secrets.PRIVATE_REGISTRY_URL }}
+        if: ${{ secrets.PRIVATE_REGISTRY_URL != '' }}
+
         run: |
           echo ${{ secrets.PRIVATE_REGISTRY_PASSWORD }} | docker login ${{ secrets.PRIVATE_REGISTRY_URL }} -u ${{ secrets.PRIVATE_REGISTRY_USERNAME }} --password-stdin
           docker tag flaskapp ${{ secrets.PRIVATE_REGISTRY_URL }}/flaskapp:latest
