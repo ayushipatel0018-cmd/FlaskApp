@@ -28,28 +28,7 @@ jobs:
       - name: Run tests
         run: pytest tests/
 
-  # Job 2: Build and Push Docker Image (runs after tests pass)
-  docker:
-    name: Build & Push Docker Image
-    runs-on: ubuntu-latest
-    needs: test  # only runs if tests pass
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -t flaskapp .
-
-      - name: Login to Docker Hub
-        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-
-      - name: Push to Docker Hub
-        run: |
-          docker tag flaskapp ${{ secrets.DOCKER_USERNAME }}/flaskapp:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/flaskapp:latest
-
-  # Job 3: Send email if tests fail
+  # Job 2: Email notification if tests fail
   notify:
     name: Email Notification on Failure
     runs-on: ubuntu-latest
